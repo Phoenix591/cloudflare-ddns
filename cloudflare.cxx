@@ -1,6 +1,8 @@
 #include <iostream>
 #include <curl/curl.h>
 #include <libconfig.h++>
+#include <json/json.h>
+
 // Callback function to write response data into a string
 size_t WriteCallback(char* ptr, size_t size, size_t nmemb, std::string* data)
 {
@@ -29,8 +31,12 @@ int main(){
     }
     // Get the authentication key from the configuration
     std::string authKey;
+    std::string zoneName;
+
     try {
         authKey = cfg.lookup("token").c_str();
+        zoneName = cfg.lookup("zone_name").c_str();
+
     }
     catch (const libconfig::SettingNotFoundException& e) {
         std::cerr << "Error: Authentication key not found in the configuration file." << std::endl;
@@ -55,11 +61,30 @@ int main(){
             std::cerr << "Request failed: " << curl_easy_strerror(res) << std::endl;
         }
         else {
-            // Print the response
-            std::cout << "Response: " << response << std::endl;
-        }
-        // Clean up
+		// Parse the JSON response
+		Json::CharReaderBuilder jsonReader;
+		Json::Value jsonData;
+		std::string error;
+		std::istringstream responseStream(response);
+		if (Json::parseFromStream(jsonReader, responseStream, &jsonData, &error)) {
+		    // Find the zone with the specified name
+		    for (const auto& zone : jsonData["result"]) {
+		            std::string currentZoneName = zone["name"].asString();
+		            std::string currentZoneId = zone["id"].asString();
+		      // Check if the current zone matches the desired zone name
+		            if (currentZoneName == zoneName) {
+		            	std::cout << "Zone Name: " << currentZoneName << std::endl;
+		                std::cout << "Zone ID: " << currentZoneId << std::endl;
+		                break;  // Exit the loop after finding the desired zone        
+		                }
+		     }
+		} else {
+		    std::cerr << "Error parsing JSON response: " << error << std::endl;
+		}
+	}
         curl_slist_free_all(headers);
-        curl_easy_cleanup(curl);    }
-    return 0;
+		curl_easy_cleanup(curl);
+	}
+
+		return 0;
 }
