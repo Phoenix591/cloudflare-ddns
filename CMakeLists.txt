@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.26)
+project(Cloudflare-App)
+find_package(libconfig++ REQUIRED)
+find_package(CURL REQUIRED)
+add_executable(cloudflare cloudflare.cxx)
+target_link_libraries(cloudflare ${LIBCONFIG++_LIBRARIES} ${CURL_LIBRARIES})
