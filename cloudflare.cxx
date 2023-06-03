@@ -63,7 +63,7 @@ int main()
     }
 
     // Construct the configuration file path
-    std::string configFilePath = std::string(homeDir) + "/.cloudflare/app.cfg";
+    std::string configFilePath = std::string(homeDir) + "/.cloudflare/ddns.cfg";
     std::cout << configFilePath << std::endl;
  std::unordered_map<std::string, std::string> configValues;
  readConfigFile(configFilePath, configValues);
