@@ -27,6 +27,8 @@ std::string httpRequest(const std::string& requestType, const std::string& url, 
             curl_easy_setopt(curl, CURLOPT_POST, 1L);
         else if (requestType == "delete")
             curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+        else if (requestType == "put")
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
 
         if (!data.empty())
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());

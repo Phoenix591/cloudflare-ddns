@@ -7,7 +7,9 @@
 #include <unordered_map>
 #include "config.h"
 #include "mycurl.h"
+#include "getip.h"
 
+using namespace std;
 
 // Function to retrieve the ID of a subdomain in a given zone
 std::string getSubdomainId(const std::string& zoneId, const std::string& subdomain, const std::string& recordType, const std::string& zoneName, const std::vector<std::string>& headers)
@@ -15,7 +17,12 @@ std::string getSubdomainId(const std::string& zoneId, const std::string& subdoma
     std::string apiUrl = "https://api.cloudflare.com/client/v4/zones/" + zoneId + "/dns_records";
 
     // Construct the request URL with the specified subdomain and record type
-    std::string name = subdomain + "." + zoneName;
+    std::string name;
+    if (!subdomain.empty()) {
+        name = subdomain + "." + zoneName;
+    } else {
+        name = zoneName;
+    }
     apiUrl += "?type=" + recordType + "&name=" + name;
     std::cout << name << std::endl;
 
@@ -75,13 +82,19 @@ int main()
 
     // Split the subdomains string into individual subdomains
     std::vector<std::string> subdomains = splitString(subdomainsStr, ' ');
-    std::cout << subdomainsStr << std::endl;
+    // std::cout << subdomainsStr << std::endl;
 
       std::vector<std::string> headers;
     headers.push_back("Content-Type: application/json");
     headers.push_back("Authorization: Bearer " + authKey);
-
-
+    // get external ip
+        int ipAddressType = 4; // or 6 for IPv6
+    std::string externalIPAddress = getExternalIPAddress(ipAddressType);
+    std::string externalIP6Address;
+        if (useIPv6) {
+            int ipAddressType = 6;
+           externalIP6Address = getExternalIPAddress(ipAddressType);
+        }
 
       std::string zoneUrl = "https://api.cloudflare.com/client/v4/zones";
     std::string zoneResponse = httpRequest("get", zoneUrl, headers, "");
@@ -102,25 +115,78 @@ int main()
                         // Output the zone name and ID
                         std::cout << "Zone Name: " << currentZoneName << std::endl;
                         std::cout << "Zone ID: " << currentZoneId << std::endl;
-
+                        string zoneRecordIdA = getSubdomainId(currentZoneId, "","A", zoneName,headers);
+                        cout << zoneRecordIdA << endl;
+                        // Construct the URL for the PUT request
+                        std::string putUrlA = "https://api.cloudflare.com/client/v4/zones/" + currentZoneId + "/dns_records/" + zoneRecordIdA;
+                        std::string putDataA = R"({
+                            "content": ")" + externalIPAddress + R"(",
+                            "type": "A",
+                            "name": ")" + zoneName + R"("
+                        })";
+                        std::string putResponseA = httpRequest("put", putUrlA, headers, putDataA);
+                        std::cout << "PUT Response for root domain " << zoneName << " (A): " << putResponseA << std::endl;
+                        if (useIPv6) {
+                            string zoneRecordIdAAAA = getSubdomainId(currentZoneId, "","AAAA", zoneName,headers);
+                        cout << zoneRecordIdAAAA << endl;
+                        // Construct the URL for the PUT request
+                        std::string putUrlAAAA = "https://api.cloudflare.com/client/v4/zones/" + currentZoneId + "/dns_records/" + zoneRecordIdAAAA;
+                        std::string putDataAAAA = R"({
+                            "content": ")" + externalIP6Address + R"(",
+                            "type": "AAAA",
+                            "name": ")" + zoneName + R"("
+                        })";
+                        std::string putResponseAAAA = httpRequest("put", putUrlA, headers, putDataA);
+                        std::cout << "PUT Response for root domain " << zoneName << " (AAAA): " << putResponseAAAA << std::endl;
+                        }
                         // Iterate through the subdomains
                         for (const auto& subdomain : subdomains) {
-                            // std::cout << subdomain  << std::endl;
-                            // Get the subdomain ID for record type 'A'
-                            std::string subdomainIdA = getSubdomainId(currentZoneId, subdomain, "A", zoneName, headers);
-                             if (!subdomainIdA.empty()) {
-                                    subdomainIdsA.push_back(subdomainIdA);
-                                }
+    std::string subdomainIdA = getSubdomainId(currentZoneId, subdomain, "A", zoneName, headers);
+    if (!subdomainIdA.empty()) {
+        subdomainIdsA.push_back(subdomainIdA);
 
-                            // If useIPv6 is true, get the subdomain ID for record type 'AAAA'
-                            if (useIPv6) {
-                                std::cout << "Ipv6" << std::endl;
-                                 std::string subdomainIdAAAA = getSubdomainId(currentZoneId, subdomain, "AAAA", zoneName, headers);
-                                  if (!subdomainIdAAAA.empty()) {
-                                    subdomainIdsAAAA.push_back(subdomainIdAAAA);
-                                }
-                            }
-                        }
+        // Construct the URL for the PUT request
+        std::string putUrlA = "https://api.cloudflare.com/client/v4/zones/" + currentZoneId + "/dns_records/" + subdomainIdA;
+
+        // Combine subdomain and zone name to form the complete name
+        std::string fullName = subdomain + "." + zoneName;
+
+        // Construct the data for the PUT request
+        std::string putDataA = R"({
+            "content": ")" + externalIPAddress + R"(",
+            "type": "A",
+            "name": ")" + fullName + R"("
+        })";
+        cout << putDataA << endl;
+        cout << externalIPAddress << endl;
+        // Make the PUT request for record type 'A'
+        std::string putResponseA = httpRequest("put", putUrlA, headers, putDataA);
+        std::cout << "PUT Response for subdomain " << fullName << " (A): " << putResponseA << std::endl;
+    }
+
+    if (useIPv6) {
+        std::string subdomainIdAAAA = getSubdomainId(currentZoneId, subdomain, "AAAA", zoneName, headers);
+     std::string fullName = subdomain + "." + zoneName;
+        if (!subdomainIdAAAA.empty()) {
+            subdomainIdsAAAA.push_back(subdomainIdAAAA);
+
+            // Construct the URL for the PUT request
+            std::string putUrlAAAA = "https://api.cloudflare.com/client/v4/zones/" + currentZoneId + "/dns_records/" + subdomainIdAAAA;
+
+            // Construct the data for the PUT request
+            std::string putDataAAAA = R"({
+                "content": ")" + externalIP6Address + R"(",
+                "type": "AAAA",
+                "name": ")" + fullName + R"("
+            })";
+
+            // Make the PUT request for record type 'AAAA'
+            std::string putResponseAAAA = httpRequest("put", putUrlAAAA, headers, putDataAAAA);
+            std::cout << "PUT Response for subdomain " << fullName << " (AAAA): " << putResponseAAAA << std::endl;
+        }
+    }
+}
+
 
                         break;  // Exit the loop after finding the desired zone
                     }
