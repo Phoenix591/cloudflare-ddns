@@ -4,6 +4,10 @@
 #include <libconfig.h++>
 #include <json/json.h>
 #include <csignal>
+#include <iostream>
+#include <string>
+#include <unordered_map>
+#include "config.h"
 
 // Callback function to write response data into a string
 size_t WriteCallback(char* ptr, size_t size, size_t nmemb, std::string* data)
@@ -20,6 +24,7 @@ std::string getSubdomainId(const std::string& zoneId, const std::string& subdoma
     // Construct the request URL with the specified subdomain and record type
     std::string name = subdomain + "." + zoneName;
     apiUrl += "?type=" + recordType + "&name=" + name;
+    std::cout << name << std::endl;
 
     CURL* curl = curl_easy_init();
     if (curl) {
@@ -81,41 +86,25 @@ int main()
 
     // Construct the configuration file path
     std::string configFilePath = std::string(homeDir) + "/.cloudflare/app.cfg";
-
-    // Load the configuration file
-    libconfig::Config cfg;
-    try {
-        cfg.readFile(configFilePath.c_str());
-    }
-    catch (const libconfig::FileIOException& e) {
-        std::cerr << "Error reading the configuration file: " << e.what() << std::endl;
-        return 1;
-    }
-    catch (const libconfig::ParseException& e) {
-        std::cerr << "Error parsing the configuration file: " << e.getError() << " on line " << e.getLine() << std::endl;
-        return 1;
+    std::cout << configFilePath << std::endl;
+ std::unordered_map<std::string, std::string> configValues;
+ readConfigFile(configFilePath, configValues);
+    std::cout << "Config Values:" << std::endl;
+    for (const auto& kvp : configValues) {
+        std::cout << kvp.first << " = " << kvp.second << std::endl;
     }
 
-    // Get the authentication key, zone name, subdomains, and record type from the configuration
-    std::string authKey;
-    std::string zoneName;
-    std::vector<std::string> subdomains;
-    std::string recordType = "A";
-    bool useIPv6 = false;
-    try {
-        authKey = cfg.lookup("token").c_str();
-        zoneName = cfg.lookup("zone_name").c_str();
-        const libconfig::Setting& subdomainsSetting = cfg.lookup("subdomains");
-        for (int i = 0; i < subdomainsSetting.getLength(); ++i) {
-            subdomains.push_back(subdomainsSetting[i].c_str());
-        }
-        if (cfg.exists("ipv6"))
-            useIPv6 = cfg.lookup("ipv6");
-    }
-    catch (const libconfig::SettingNotFoundException& e) {
-        std::cerr << "Error: Required settings not found in the configuration file." << std::endl;
-        return 1;
-    }
+   std::string authKey = configValues["token"];
+   std::string zoneName = configValues["zone_name"];
+   std::string subdomainsStr = configValues["subdomains"];
+   std::cout << "subdomains: " << subdomainsStr << std::endl;
+   std::string useIPv6Str = configValues["useIPv6"];
+    bool useIPv6 = (useIPv6Str == "1");
+    std::cout << "config useipv6: " << configValues["useIPv6" ]<< " useIPv6: "<< useIPv6 << std::endl;
+
+    // Split the subdomains string into individual subdomains
+    std::vector<std::string> subdomains = splitString(subdomainsStr, ' ');
+    std::cout << subdomainsStr << std::endl;
 
     CURL* curl = curl_easy_init();
     if (curl) {
@@ -162,7 +151,7 @@ int main()
 
                         // Iterate through the subdomains
                         for (const auto& subdomain : subdomains) {
-                            std::cout << subdomain  << std::endl;
+                            // std::cout << subdomain  << std::endl;
                             // Get the subdomain ID for record type 'A'
                             std::string subdomainIdA = getSubdomainId(currentZoneId, subdomain, "A", zoneName, headers);
                              if (!subdomainIdA.empty()) {
@@ -171,6 +160,7 @@ int main()
 
                             // If useIPv6 is true, get the subdomain ID for record type 'AAAA'
                             if (useIPv6) {
+                                std::cout << "Ipv6" << std::endl;
                                  std::string subdomainIdAAAA = getSubdomainId(currentZoneId, subdomain, "AAAA", zoneName, headers);
                                   if (!subdomainIdAAAA.empty()) {
                                     subdomainIdsAAAA.push_back(subdomainIdAAAA);

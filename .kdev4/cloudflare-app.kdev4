@@ -1,0 +1,19 @@
+[Buildset]
+BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x01\x00\x00\x00\x1c\x00c\x00l\x00o\x00u\x00d\x00f\x00l\x00a\x00r\x00e\x00-\x00a\x00p\x00p)
+
+[CMake]
+Build Directory Count=1
+Current Build Directory Index-Host System=0
+
+[CMake][CMake Build Directory 0]
+Build Directory Path=/home/kyle/cloudflare-build
+Build Type=Debug
+CMake Binary=/usr/bin/cmake
+CMake Executable=/usr/bin/cmake
+Environment Profile=
+Extra Arguments=
+Install Directory=/home/kyle
+Runtime=Host System
+
+[Project]
+VersionControlSupport=kdevgit
