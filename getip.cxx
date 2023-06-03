@@ -6,13 +6,13 @@
 std::string getExternalIPAddress(int ipType) {
     std::string digCommand = "dig -" + std::to_string(ipType) + " +short TXT o-o.myaddr.l.google.com @ns1.google.com";
     FILE* pipe = popen(digCommand.c_str(), "r");
-    if (pipe == nullptr) {
+    if (!pipe) {
         return "";
     }
 
     char buffer[128];
     std::string result;
-    while (feof(pipe) == 0) {
+    while (!feof(pipe)) {
         if (fgets(buffer, 128, pipe) != NULL) {
             result += buffer;
         }

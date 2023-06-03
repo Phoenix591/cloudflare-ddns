@@ -2,6 +2,7 @@
 #include <cstdlib> // For getenv()
 #include <json/json.h>
 #include <csignal>
+#include <iostream>
 #include <string>
 #include <unordered_map>
 #include "config.h"
@@ -27,28 +28,28 @@ std::string getSubdomainId(const std::string& zoneId, const std::string& subdoma
 
     std::string dnsRecordsResponse = httpRequest("get", apiUrl, headers, "");
 
-            // Parse the JSON response
-            Json::CharReaderBuilder jsonReader;
-            Json::Value jsonData;
-            std::string error;
-            std::istringstream responseStream(dnsRecordsResponse);
-            if (Json::parseFromStream(jsonReader, responseStream, &jsonData, &error)) {
-                // Check if any results are found
-                if (jsonData["success"].asBool() && jsonData["result_info"]["count"].asInt() > 0) {
-                    // Output the subdomain and ID
-                    std::cout << "Subdomain: " << subdomain << std::endl;
-                    std::cout << "Subdomain ID: " << jsonData["result"][0]["id"].asString() << std::endl;
-                    subdomainId = jsonData["result"][0]["id"].asString();
-                } else {
-                    // Output the entire response
-                    std::cout << "No results found for the specified subdomain." << std::endl;
-                    std::cout << "API Response: " << dnsRecordsResponse << std::endl;
-                }
-            } else {
-                std::cerr << "Error parsing JSON response: " << error << std::endl;
-            }
+    // Parse the JSON response
+    Json::CharReaderBuilder jsonReader;
+    Json::Value jsonData;
+    std::string error;
+    std::istringstream responseStream(dnsRecordsResponse);
+    if (Json::parseFromStream(jsonReader, responseStream, &jsonData, &error)) {
+        // Check if any results are found
+        if (jsonData["success"].asBool() && jsonData["result_info"]["count"].asInt() > 0) {
+            // Output the subdomain and ID
+            std::cout << "Subdomain: " << subdomain << std::endl;
+            std::cout << "Subdomain ID: " << jsonData["result"][0]["id"].asString() << std::endl;
+            subdomainId = jsonData["result"][0]["id"].asString();
+        } else {
+            // Output the entire response
+            std::cout << "No results found for the specified subdomain." << std::endl;
+            std::cout << "API Response: " << dnsRecordsResponse << std::endl;
+        }
+    } else {
+        std::cerr << "Error parsing JSON response: " << error << std::endl;
+    }
 
-     return subdomainId;
+    return subdomainId;
 }
 int main()
 {
@@ -56,7 +57,7 @@ int main()
     std::vector<std::string> subdomainIdsAAAA;
     // Get the user's home directory
     const char* homeDir = getenv("HOME");
-    if (homeDir == nullptr) {
+    if (!homeDir) {
         std::cerr << "Error: Unable to get the user's home directory." << std::endl;
         return 1;
     }
@@ -64,18 +65,18 @@ int main()
     // Construct the configuration file path
     std::string configFilePath = std::string(homeDir) + "/.cloudflare/ddns.cfg";
     std::cout << configFilePath << std::endl;
- std::unordered_map<std::string, std::string> configValues;
- readConfigFile(configFilePath, configValues);
+    std::unordered_map<std::string, std::string> configValues;
+    readConfigFile(configFilePath, configValues);
     std::cout << "Config Values:" << std::endl;
     for (const auto& kvp : configValues) {
         std::cout << kvp.first << " = " << kvp.second << std::endl;
     }
 
-   std::string authKey = configValues["token"];
-   std::string zoneName = configValues["zone_name"];
-   std::string subdomainsStr = configValues["subdomains"];
-   std::cout << "subdomains: " << subdomainsStr << std::endl;
-   std::string useIPv6Str = configValues["useIPv6"];
+    std::string authKey = configValues["token"];
+    std::string zoneName = configValues["zone_name"];
+    std::string subdomainsStr = configValues["subdomains"];
+    std::cout << "subdomains: " << subdomainsStr << std::endl;
+    std::string useIPv6Str = configValues["useIPv6"];
     bool useIPv6 = (useIPv6Str == "1");
     std::cout << "config useipv6: " << configValues["useIPv6" ]<< " useIPv6: "<< useIPv6 << std::endl;
 
@@ -83,46 +84,46 @@ int main()
     std::vector<std::string> subdomains = splitString(subdomainsStr, ' ');
     // std::cout << subdomainsStr << std::endl;
 
-      std::vector<std::string> headers;
+    std::vector<std::string> headers;
     headers.push_back("Content-Type: application/json");
     headers.push_back("Authorization: Bearer " + authKey);
     // get external ip
-        int ipAddressType = 4; // or 6 for IPv6
+    int ipAddressType = 4; // or 6 for IPv6
     std::string externalIPAddress = getExternalIPAddress(ipAddressType);
     std::string externalIP6Address;
-        if (useIPv6) {
-            int ipAddressType = 6;
-           externalIP6Address = getExternalIPAddress(ipAddressType);
-        }
+    if (useIPv6) {
+        int ipAddressType = 6;
+        externalIP6Address = getExternalIPAddress(ipAddressType);
+    }
 
-      std::string zoneUrl = "https://api.cloudflare.com/client/v4/zones";
+    std::string zoneUrl = "https://api.cloudflare.com/client/v4/zones";
     std::string zoneResponse = httpRequest("get", zoneUrl, headers, "");
 
-            // Parse the JSON response
-            Json::CharReaderBuilder jsonReader;
-            Json::Value jsonData;
-            std::string error;
-            std::istringstream responseStream(zoneResponse);
-            if (Json::parseFromStream(jsonReader, responseStream, &jsonData, &error)) {
-                // Find the zone with the specified name
-                for (const auto& zone : jsonData["result"]) {
-                    std::string currentZoneName = zone["name"].asString();
-                    std::string currentZoneId = zone["id"].asString();
+    // Parse the JSON response
+    Json::CharReaderBuilder jsonReader;
+    Json::Value jsonData;
+    std::string error;
+    std::istringstream responseStream(zoneResponse);
+    if (Json::parseFromStream(jsonReader, responseStream, &jsonData, &error)) {
+        // Find the zone with the specified name
+        for (const auto& zone : jsonData["result"]) {
+            std::string currentZoneName = zone["name"].asString();
+            std::string currentZoneId = zone["id"].asString();
 
-                    // Check if the current zone matches the desired zone name
-                    if (currentZoneName == zoneName) {
-                        // Output the zone name and ID
-                        std::cout << "Zone Name: " << currentZoneName << std::endl;
-                        std::cout << "Zone ID: " << currentZoneId << std::endl;
-                        string zoneRecordIdA = getSubdomainId(currentZoneId, "","A", zoneName,headers);
-                        cout << zoneRecordIdA << endl;
-                        // Construct the URL for the PUT request
-                        std::string putUrlA = "https://api.cloudflare.com/client/v4/zones/" + currentZoneId + "/dns_records/" + zoneRecordIdA;
-                        std::string putDataA = R"({
+            // Check if the current zone matches the desired zone name
+            if (currentZoneName == zoneName) {
+                // Output the zone name and ID
+                std::cout << "Zone Name: " << currentZoneName << std::endl;
+                std::cout << "Zone ID: " << currentZoneId << std::endl;
+                string zoneRecordIdA = getSubdomainId(currentZoneId, "","A", zoneName,headers);
+                cout << zoneRecordIdA << endl;
+                // Construct the URL for the PUT request
+                std::string putUrlA = "https://api.cloudflare.com/client/v4/zones/" + currentZoneId + "/dns_records/" + zoneRecordIdA;
+                std::string putDataA = R"({
                             "content": ")" + externalIPAddress + R"(",
                             "type": "A",
                             "name": ")" + zoneName + R"("
-                        })";
+                })";
                         std::string putResponseA = httpRequest("put", putUrlA, headers, putDataA);
                         std::cout << "PUT Response for root domain " << zoneName << " (A): " << putResponseA << std::endl;
                         if (useIPv6) {
@@ -165,7 +166,7 @@ int main()
 
     if (useIPv6) {
         std::string subdomainIdAAAA = getSubdomainId(currentZoneId, subdomain, "AAAA", zoneName, headers);
-     std::string fullName = subdomain + "." + zoneName;
+        std::string fullName = subdomain + "." + zoneName;
         if (!subdomainIdAAAA.empty()) {
             subdomainIdsAAAA.push_back(subdomainIdAAAA);
 
@@ -184,13 +185,13 @@ int main()
             std::cout << "PUT Response for subdomain " << fullName << " (AAAA): " << putResponseAAAA << std::endl;
         }
     }
-}
+                        }
 
 
                         break;  // Exit the loop after finding the desired zone
-                    }
-                }
-            } // Json parsing
+            }
+        }
+    } // Json parsing
             else {
                 std::cerr << "Error parsing JSON response: " << error << std::endl;
             }

@@ -23,11 +23,11 @@ std::unordered_map<std::string, std::string> readConfigFile(const std::string& f
                 std::string value = line.substr(delimiterPos + 1);
                 // Trim leading spaces from the value
                 value.erase(value.begin(), std::find_if(value.begin(), value.end(), [](int ch) {
-                    return std::isspace(ch) == 0;
+                    return !std::isspace(ch);
                 }));
                 // Trailing spaces from key
                 key.erase(std::find_if(key.rbegin(), key.rend(), [](int ch) {
-                    return std::isspace(ch) == 0;
+                    return !std::isspace(ch);
                 }).base(), key.end());
 
                 configValues[key] = value;
