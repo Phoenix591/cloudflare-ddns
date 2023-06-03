@@ -15,31 +15,35 @@ std::string httpRequest(const std::string& requestType, const std::string& url, 
     std::string response;
 
     CURL* curl = curl_easy_init();
-    if (curl) {
+    if (curl != nullptr) {
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 
         struct curl_slist* headerList = nullptr;
-        for (const std::string& header : headers)
+        for (const std::string& header : headers) {
             headerList = curl_slist_append(headerList, header.c_str());
+}
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList);
 
-        if (requestType == "post")
+        if (requestType == "post") {
             curl_easy_setopt(curl, CURLOPT_POST, 1L);
-        else if (requestType == "delete")
+        } else if (requestType == "delete") {
             curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-        else if (requestType == "put")
+        } else if (requestType == "put") {
             curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
+}
 
-        if (!data.empty())
+        if (!data.empty()) {
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+}
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
 
         CURLcode res = curl_easy_perform(curl);
 
-        if (res != CURLE_OK)
+        if (res != CURLE_OK) {
             std::cerr << "Failed to perform HTTP request: " << curl_easy_strerror(res) << std::endl;
+}
 
         curl_easy_cleanup(curl);
         curl_slist_free_all(headerList);

@@ -2,7 +2,6 @@
 #include <cstdlib> // For getenv()
 #include <json/json.h>
 #include <csignal>
-#include <iostream>
 #include <string>
 #include <unordered_map>
 #include "config.h"
@@ -57,7 +56,7 @@ int main()
     std::vector<std::string> subdomainIdsAAAA;
     // Get the user's home directory
     const char* homeDir = getenv("HOME");
-    if (!homeDir) {
+    if (homeDir == nullptr) {
         std::cerr << "Error: Unable to get the user's home directory." << std::endl;
         return 1;
     }
